@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "569780107068",
+    "project_id": "moneyapp-585c0",
+    "storage_bucket": "moneyapp-585c0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:569780107068:android:d8a2d034d4949223161039",
+        "android_client_info": {
+          "package_name": "com.telkom.DanaApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "569780107068-ecm5dsh4tc5jhnd5rtea05t0vbgjtpdv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwtbt9WWYhM3FuGk5UyoEvvjxgyX-_T1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "569780107068-ecm5dsh4tc5jhnd5rtea05t0vbgjtpdv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:569780107068:android:d207c5308c15579c161039",
+        "android_client_info": {
+          "package_name": "com.telkom.moneyapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "569780107068-dvoj402qskmvbdph2jff0vdh869h1ehp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.telkom.moneyapp",
+            "certificate_hash": "4c067bb3ff11203e0c74bfe46814f49b387dd07a"
+          }
+        },
+        {
+          "client_id": "569780107068-ecm5dsh4tc5jhnd5rtea05t0vbgjtpdv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwtbt9WWYhM3FuGk5UyoEvvjxgyX-_T1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "569780107068-ecm5dsh4tc5jhnd5rtea05t0vbgjtpdv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

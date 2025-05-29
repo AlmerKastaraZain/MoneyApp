@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">MoneyApp</string>
+    <string name="action_go">Go</string>
+    <string name="baking_title">Baking with Gemini</string>
+    <string name="label_prompt">Prompt</string>
+    <string name="prompt_placeholder">Provide a recipe for the baked goods in the image</string>
+    <string name="image1_description">Cupcake</string>
+    <string name="image2_description">Cookies</string>
+    <string name="image3_description">Cake</string>
+    <string name="results_placeholder">(Results will appear here)</string>
+    <string name="SignUpText">Sign Up\n</string>
+    <string name="InputEmail">Email or Phone Number</string>
+    <string name="InputPassword">Password</string>
+    <string name="InputConfirm">Confirm Password</string>
+    <string name="InputFirstName">First Name</string>
+    <string name="InputLastName">Last Name</string>
+    <string name="default_web_client">569780107068-ecm5dsh4tc5jhnd5rtea05t0vbgjtpdv.apps.googleusercontent.com</string>
+    <string name="SignInText">Sign In\n</string>
+</resources>
