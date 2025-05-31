@@ -1,11 +1,9 @@
-package com.telkom.DanaApp.component // Or your actual package
+package com.telkom.DanaApp.component
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +12,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape // For a circular "Add" button background
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ripple.LocalRippleTheme
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material.ripple.RippleTheme
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -32,12 +30,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,24 +47,23 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.telkom.DanaApp.R // Your R file
-import com.telkom.DanaApp.ui.theme.Black
-import com.telkom.DanaApp.ui.theme.DarkGreen // Make sure these are correctly defined
+import com.telkom.DanaApp.R
+import com.telkom.DanaApp.WalletViewModel
+import com.telkom.DanaApp.ui.theme.DarkGreen
 import com.telkom.DanaApp.ui.theme.LightGray
 import com.telkom.DanaApp.ui.theme.Orange
-import com.telkom.DanaApp.ui.theme.PoppinsFontFamily
 import com.telkom.DanaApp.ui.theme.White
+import com.telkom.DanaApp.view.WalletScreen
+import com.telkom.DanaApp.view.TransactionData
 
-// --- Screen Definitions (Keep as is) ---
+// --- Screen Definitions ---
 sealed class Screen(val route: String, val title: String, val icon: Int, val index: Int) {
     object Wallet : Screen("wallet", "Wallet", R.drawable.icon_wallet, 0)
     object Report : Screen("report", "Report", R.drawable.icon_report, 1)
@@ -78,7 +75,6 @@ sealed class Screen(val route: String, val title: String, val icon: Int, val ind
 val bottomNavScreens = listOf(
     Screen.Wallet,
     Screen.Report,
-    // Add is handled separately by the central button
     Screen.Target,
     Screen.User,
 )
@@ -107,20 +103,43 @@ fun MainScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.White,
         bottomBar = { BottomNavigationBar(navController = navController) }
-
     ) { innerPadding ->
         NavHost(
             navController,
             startDestination = Screen.Wallet.route,
             Modifier.padding(innerPadding),
         ) {
-            composable(Screen.Wallet.route) { WalletScreen() }
+            composable(Screen.Wallet.route) {
+                // Sample data for preview - replace with actual data source
+                val sampleTransactions = listOf(
+                    TransactionData(
+                        title = "Makan & Minum",
+                        desc = "Makan siang di restoran",
+                        type = "PENGELUARAN",
+                        total = 50000,
+                        categoryIconRes = R.drawable.ic_launcher_foreground
+                    ),
+                    TransactionData(
+                        title = "Gaji",
+                        desc = "Gaji bulan ini",
+                        type = "PEMASUKAN",
+                        total = 5000000,
+                        categoryIconRes = R.drawable.ic_launcher_foreground
+                    )
+                )
+
+                WalletScreen(
+                    transactions = sampleTransactions,
+                    onAddTransactionClick = onGoToAddBalance,
+                    onTransactionClick = { /* Handle transaction click */ }
+                )
+            }
             composable(Screen.Report.route) { ReportScreen() }
             composable(Screen.Add.route) {
                 LaunchedEffect(Unit) {
                     onGoToAddBalance()
                     if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack() // Go back to the previous screen in this NavHost
+                        navController.popBackStack()
                     } else {
                         navController.navigate(Screen.Wallet.route) {
                             popUpTo(navController.graph.id) { inclusive = true }
@@ -136,12 +155,10 @@ fun MainScreen(
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
-    // All screens including "Add" for consistent indexing if needed,
-    // but "Add" is handled by the central button.
     val allScreens = listOf(
         Screen.Wallet,
         Screen.Report,
-        Screen.Add, // For index reference if Add button changes selection
+        Screen.Add,
         Screen.Target,
         Screen.User,
     )
@@ -149,44 +166,32 @@ fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Determine selected item based on current route
-    // The central "Add" button won't be "selected" in the bottom bar items,
-    // but we might want to update a general selected state if navigating via it.
-    // For simplicity, let's manage selection based on the bottom bar items only.
     var selectedItemIndex by rememberSaveable {
         mutableIntStateOf(allScreens.indexOfFirst { it.route == Screen.Wallet.route })
     }
 
     // Update selectedItemIndex when currentRoute changes
-    // This makes sure the correct item is highlighted even with programmatic navigation or back press
     currentRoute?.let { route ->
         val matchedScreen = allScreens.find { it.route == route }
-        if (matchedScreen != null && matchedScreen != Screen.Add) { // Don't select "Add" as a bar item
+        if (matchedScreen != null && matchedScreen != Screen.Add) {
             selectedItemIndex = matchedScreen.index
-        } else if (route == Screen.Add.route) {
-            // If "Add" screen is active, decide what to show as selected.
-            // E.g., keep the previous selection or select nothing.
-            // For now, let's assume "Add" doesn't change the bottom bar selection.
-            // Or, if "Add" screen has its own indicator:
-            // selectedItemIndex = Screen.Add.index // This would require Add to be in left/right screens
         }
     }
-
 
     CompositionLocalProvider(LocalRippleTheme provides NoRippleTheme) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp), // Height of the actual bar + part of the FAB
+                .height(80.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // The actual NavigationBar
             NavigationBar(
-                containerColor = DarkGreen, // Set background color directly
+                containerColor = DarkGreen,
                 modifier = Modifier
-                    .height(60.dp) // Standard height for the bar itself
+                    .height(60.dp)
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter) // Ensure it's at the bottom of the Box
+                    .align(Alignment.BottomCenter)
             ) {
                 val leftScreens = allScreens.subList(0, 2) // Wallet, Report
                 val rightScreens = allScreens.subList(3, allScreens.size) // Target, User
@@ -204,7 +209,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                                     contentDescription = screen.title,
                                     modifier = Modifier
                                         .size(32.dp)
-                                        .alpha(if (isSelected) 1f else 0.5f), // Adjusted alpha
+                                        .alpha(if (isSelected) 1f else 0.5f),
                                     tint = White
                                 )
                             },
@@ -214,7 +219,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                                     style = TextStyle(
                                         fontSize = 10.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = White.copy(alpha = if (isSelected) 1f else 0.7f) // Adjusted alpha
+                                        color = White.copy(alpha = if (isSelected) 1f else 0.7f)
                                     )
                                 )
                             },
@@ -228,7 +233,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                                 }
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent, // No indicator circle
+                                indicatorColor = Color.Transparent,
                                 selectedIconColor = White,
                                 unselectedIconColor = White.copy(alpha = 0.5f),
                                 selectedTextColor = White,
@@ -238,14 +243,13 @@ fun BottomNavigationBar(navController: NavHostController) {
                     }
                 }
 
-                // Spacer for the central button (takes up space equivalent to one item)
-                Box(modifier = Modifier.weight(0.2f)) {} // Adjust weight as needed for spacing
+                // Spacer for the central button
+                Box(modifier = Modifier.weight(0.2f)) {}
 
                 // Right items
                 Row(modifier = Modifier.weight(1.2f).graphicsLayer {
                     translationY = 68.dp.value
-                }
-                ) {
+                }) {
                     rightScreens.forEach { screen ->
                         val isSelected = selectedItemIndex == screen.index
                         NavigationBarItem(
@@ -293,34 +297,27 @@ fun BottomNavigationBar(navController: NavHostController) {
             // Central "Add" button - overlaid on top
             Surface(
                 modifier = Modifier
-                    .align(Alignment.TopCenter) // Align to the top center of the 80.dp Box
-                    .size(70.dp) // Increased size for easier tapping and visual prominence
-                    .clip(CircleShape) // Make it circular
+                    .align(Alignment.TopCenter)
+                    .size(70.dp)
+                    .clip(CircleShape)
                     .clickable {
-                        // selectedItemIndex = Screen.Add.index // Optionally select "Add"
                         navController.navigate(Screen.Add.route) {
-                            // Decide navigation behavior for "Add"
-                            // popUpTo(navController.graph.startDestinationId) { saveState = true } // If it's a main tab
                             launchSingleTop = true
-                            restoreState = true // If state should be restored
+                            restoreState = true
                         }
                     },
-                color = Orange, // Example: Use Orange for the FAB
-                shadowElevation = 6.dp // Add some shadow
+                color = Orange,
+                shadowElevation = 6.dp
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.icon_plus),
                     contentDescription = "Add",
-                    modifier = Modifier
-                        .size(38.dp), // Size of the icon itself
-                    // Consider tinting the icon if it's a vector and not the desired color
-                    // colorFilter = ColorFilter.tint(White)
+                    modifier = Modifier.size(38.dp)
                 )
             }
         }
     }
 }
-
 
 // --- Placeholder Screens ---
 @Composable
@@ -328,7 +325,7 @@ fun SimpleScreenContent(screenName: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightGray) // Use your theme color
+            .background(LightGray)
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -338,16 +335,50 @@ fun SimpleScreenContent(screenName: String) {
 }
 
 @Composable
-fun WalletScreen() {
-    SimpleScreenContent("Wallet Screen")
+fun WalletScreen(viewModel: WalletViewModel = remember { WalletViewModel() }) {
+    val transactions by viewModel.transactions
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(transactions) { transaction ->
+            TransactionItem(transaction)
+            Divider(modifier = Modifier.padding(horizontal = 16.dp))
+        }
+    }
 }
+
+@Composable
+fun TransactionItem(transaction: TransactionData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Icon(
+            painter = painterResource(id = transaction.categoryIconRes),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(text = transaction.title, style = MaterialTheme.typography.bodyLarge)
+            Text(text = transaction.desc, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Rp ${transaction.total}",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (transaction.type == "PEMASUKAN") MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+
 
 @Composable
 fun ReportScreen() {
     SimpleScreenContent("Report Screen")
 }
-
-
 
 @Composable
 fun TargetScreen() {
@@ -358,6 +389,3 @@ fun TargetScreen() {
 fun UserScreen() {
     SimpleScreenContent("User/Profile Screen")
 }
-
-
-
