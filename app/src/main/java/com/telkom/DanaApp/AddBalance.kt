@@ -108,9 +108,9 @@ class AddBalance : AppCompatActivity() {
 
 
         val collectionPath = if (data.transactionType == "PEMASUKAN") {
-            "App/MoneyApp/Penambahan"
+            "App/MoneyApp/TransactionData"
         } else {
-            "App/MoneyApp/Pengeluaran"
+            "App/MoneyApp/TransactionData"
         }
 
         val firestoreDocument = hashMapOf(
@@ -119,6 +119,7 @@ class AddBalance : AppCompatActivity() {
             "desc" to data.notes,
             "total" to data.amount,
             "type" to data.transactionType,
+            "categoryIconRes" to data.categoryIconRes,
             "transactionTimestamp" to transactionTimestamp, // <-- STORE AS TIMESTAMP
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp()

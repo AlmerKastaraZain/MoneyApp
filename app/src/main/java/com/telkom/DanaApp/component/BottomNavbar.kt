@@ -1,5 +1,6 @@
 package com.telkom.DanaApp.component // Or your actual package
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -53,6 +54,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -64,23 +67,34 @@ import com.telkom.DanaApp.ui.theme.DarkGreen // Make sure these are correctly de
 import com.telkom.DanaApp.ui.theme.LightGray
 import com.telkom.DanaApp.ui.theme.Orange
 import com.telkom.DanaApp.ui.theme.PoppinsFontFamily
+import com.telkom.DanaApp.ui.theme.TransactionData
 import com.telkom.DanaApp.ui.theme.White
+import com.telkom.DanaApp.view.UserScreen
+import com.telkom.DanaApp.view.WalletScreen
+import com.telkom.DanaApp.view.WalletScreenStateful
+import com.telkom.DanaApp.viewmodel.WalletViewModel
 
-// --- Screen Definitions (Keep as is) ---
+// In MainScreen.kt (com.telkom.DanaApp.component)
+
+// In MainScreen.kt (com.telkom.DanaApp.component)
+
 sealed class Screen(val route: String, val title: String, val icon: Int, val index: Int) {
-    object Wallet : Screen("wallet", "Wallet", R.drawable.icon_wallet, 0)
-    object Report : Screen("report", "Report", R.drawable.icon_report, 1)
-    object Add : Screen("add", "Add", R.drawable.icon_plus, 2) // Center button
-    object Target : Screen("target", "Target", R.drawable.icon_target, 3)
-    object User : Screen("profile", "Account", R.drawable.icon_user, 4)
+    object Wallet : Screen("wallet", "Dompet", R.drawable.icon_wallet, 0) // "Dompet" for label
+    object Add : Screen("add", "Tambah", R.drawable.icon_plus, 1)    // Central "Add" button
+    object User : Screen("profile", "Akun", R.drawable.icon_user, 2)   // "Akun" for label
 }
 
-val bottomNavScreens = listOf(
+// These are the actual items that will appear in the NavigationBar (excluding Add)
+val displayableBottomNavScreens = listOf(
     Screen.Wallet,
-    Screen.Report,
-    // Add is handled separately by the central button
-    Screen.Target,
-    Screen.User,
+    Screen.User
+)
+
+// All screens including the placeholder for "Add" for layout indexing
+val allLayoutScreens = listOf(
+    Screen.Wallet,
+    Screen.Add, // Placeholder for the central FAB
+    Screen.User
 )
 
 // Custom Ripple Theme to disable the ripple effect
@@ -98,230 +112,176 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
 
-    // Back press handling for NavHost
     BackHandler(enabled = navController.previousBackStackEntry != null) {
         navController.popBackStack()
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.White,
+        containerColor = Color.White, // Consider using MaterialTheme.colorScheme.background
         bottomBar = { BottomNavigationBar(navController = navController) }
-
     ) { innerPadding ->
         NavHost(
             navController,
             startDestination = Screen.Wallet.route,
-            Modifier.padding(innerPadding),
         ) {
-            composable(Screen.Wallet.route) { WalletScreen() }
-            composable(Screen.Report.route) { ReportScreen() }
+            composable(Screen.Wallet.route) {
+                // Use the WalletViewModel to get the state
+                val walletViewModel: WalletViewModel = viewModel()
+                val walletUiState = walletViewModel.uiState
+                val lifecycleOwner = LocalLifecycleOwner.current
+                // Re-fetch transactions when the screen becomes RESUMED
+                LaunchedEffect(lifecycleOwner.lifecycle.currentState) {
+                    if (lifecycleOwner.lifecycle.currentState == androidx.lifecycle.Lifecycle.State.RESUMED) {
+                        Log.d("WalletScreen", "Screen Resumed, fetching transactions.")
+                        walletViewModel.fetchUserTransactions()
+                    }
+                }
+                // Pass the state and callbacks to WalletScreenStateful
+                // WalletScreenStateful will internally call WalletScreen
+                WalletScreenStateful(
+                    uiState = walletUiState,
+                    onRefreshTransactions = { walletViewModel.fetchUserTransactions() }, // Or observeUserTransactions()
+                    onNavigateToAddTransaction = onGoToAddBalance
+                    // No longer need to pass onNavigateToTransactionDetail from here for editing
+                    // if WalletScreenStateful handles it directly.
+                )
+            }
             composable(Screen.Add.route) {
                 LaunchedEffect(Unit) {
                     onGoToAddBalance()
+                    // Navigate back more reliably
                     if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack() // Go back to the previous screen in this NavHost
-                    } else {
+                        navController.popBackStack()
+                    } else { // Should not happen if Add is from a main screen
                         navController.navigate(Screen.Wallet.route) {
                             popUpTo(navController.graph.id) { inclusive = true }
                         }
                     }
                 }
             }
-            composable(Screen.Target.route) { TargetScreen() }
             composable(Screen.User.route) { UserScreen() }
         }
     }
 }
 
+// In MainScreen.kt (com.telkom.DanaApp.component)
+// In MainScreen.kt (com.telkom.DanaApp.component)
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
-    // All screens including "Add" for consistent indexing if needed,
-    // but "Add" is handled by the central button.
-    val allScreens = listOf(
-        Screen.Wallet,
-        Screen.Report,
-        Screen.Add, // For index reference if Add button changes selection
-        Screen.Target,
-        Screen.User,
-    )
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Determine selected item based on current route
-    // The central "Add" button won't be "selected" in the bottom bar items,
-    // but we might want to update a general selected state if navigating via it.
-    // For simplicity, let's manage selection based on the bottom bar items only.
+    // Determine selected item based on current route, mapping to displayable items
     var selectedItemIndex by rememberSaveable {
-        mutableIntStateOf(allScreens.indexOfFirst { it.route == Screen.Wallet.route })
+        // Default to Wallet's index within allLayoutScreens
+        mutableIntStateOf(allLayoutScreens.indexOfFirst { it.route == Screen.Wallet.route })
     }
 
     // Update selectedItemIndex when currentRoute changes
-    // This makes sure the correct item is highlighted even with programmatic navigation or back press
-    currentRoute?.let { route ->
-        val matchedScreen = allScreens.find { it.route == route }
-        if (matchedScreen != null && matchedScreen != Screen.Add) { // Don't select "Add" as a bar item
+    LaunchedEffect(currentRoute) {
+        allLayoutScreens.find { it.route == currentRoute && it != Screen.Add }?.let { matchedScreen ->
             selectedItemIndex = matchedScreen.index
-        } else if (route == Screen.Add.route) {
-            // If "Add" screen is active, decide what to show as selected.
-            // E.g., keep the previous selection or select nothing.
-            // For now, let's assume "Add" doesn't change the bottom bar selection.
-            // Or, if "Add" screen has its own indicator:
-            // selectedItemIndex = Screen.Add.index // This would require Add to be in left/right screens
         }
     }
-
 
     CompositionLocalProvider(LocalRippleTheme provides NoRippleTheme) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp), // Height of the actual bar + part of the FAB
-            contentAlignment = Alignment.BottomCenter,
+                .height(80.dp), // Total height including the protruding FAB
+            contentAlignment = Alignment.BottomCenter
         ) {
-            // The actual NavigationBar
+            // The actual NavigationBar background
             NavigationBar(
-                containerColor = DarkGreen, // Set background color directly
+                containerColor = DarkGreen,
                 modifier = Modifier
-                    .height(60.dp) // Standard height for the bar itself
+                    .height(70.dp) // Standard height for the bar
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter) // Ensure it's at the bottom of the Box
+                    .align(Alignment.BottomCenter)
             ) {
-                val leftScreens = allScreens.subList(0, 2) // Wallet, Report
-                val rightScreens = allScreens.subList(3, allScreens.size) // Target, User
-
-                // Left items
-                Row(modifier = Modifier.weight(1.2f).graphicsLayer {
-                    translationY = 68.dp.value
-                }) {
-                    leftScreens.forEach { screen ->
+                // Iterate through allLayoutScreens to create items OR spacers
+                allLayoutScreens.forEach { screen ->
+                    if (screen == Screen.Add) {
+                        // This is the space for the central FAB, make it take up proportional space
+                        Spacer(Modifier.weight(1f)) // Adjust weight as needed
+                    } else {
+                        // This is a regular NavigationBarItem (Wallet or User)
                         val isSelected = selectedItemIndex == screen.index
                         NavigationBarItem(
+                            selected = isSelected,
+                            onClick = {
+                                if (currentRoute != screen.route) { // Avoid re-navigating to the same screen
+                                    selectedItemIndex = screen.index
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
                             icon = {
                                 Icon(
                                     painterResource(id = screen.icon),
                                     contentDescription = screen.title,
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .alpha(if (isSelected) 1f else 0.5f), // Adjusted alpha
-                                    tint = White
+                                    modifier = Modifier.size(if (isSelected) 16.dp else 18.dp) // Slightly larger when selected
                                 )
                             },
                             label = {
                                 Text(
                                     text = screen.title,
-                                    style = TextStyle(
-                                        fontSize = 10.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = White.copy(alpha = if (isSelected) 1f else 0.7f) // Adjusted alpha
-                                    )
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 10.sp
                                 )
                             },
-                            selected = isSelected,
-                            onClick = {
-                                selectedItemIndex = screen.index
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            alwaysShowLabel = true, // Or false based on your preference
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent, // No indicator circle
                                 selectedIconColor = White,
-                                unselectedIconColor = White.copy(alpha = 0.5f),
+                                unselectedIconColor = White.copy(alpha = 0.7f),
                                 selectedTextColor = White,
-                                unselectedTextColor = White.copy(alpha = 0.7f)
-                            )
-                        )
-                    }
-                }
-
-                // Spacer for the central button (takes up space equivalent to one item)
-                Box(modifier = Modifier.weight(0.2f)) {} // Adjust weight as needed for spacing
-
-                // Right items
-                Row(modifier = Modifier.weight(1.2f).graphicsLayer {
-                    translationY = 68.dp.value
-                }
-                ) {
-                    rightScreens.forEach { screen ->
-                        val isSelected = selectedItemIndex == screen.index
-                        NavigationBarItem(
-                            icon = {
-                                Icon(
-                                    painterResource(id = screen.icon),
-                                    contentDescription = screen.title,
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .alpha(if (isSelected) 1f else 0.5f),
-                                    tint = White
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = screen.title,
-                                    style = TextStyle(
-                                        fontSize = 10.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = White.copy(alpha = if (isSelected) 1f else 0.7f)
-                                    )
-                                )
-                            },
-                            selected = isSelected,
-                            onClick = {
-                                selectedItemIndex = screen.index
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent,
-                                selectedIconColor = White,
-                                unselectedIconColor = White.copy(alpha = 0.5f),
-                                selectedTextColor = White,
-                                unselectedTextColor = White.copy(alpha = 0.7f)
-                            )
+                                unselectedTextColor = White.copy(alpha = 0.7f),
+                                indicatorColor = Color.Transparent // No indicator blob
+                            ),
+                            modifier = Modifier.weight(1f).offset(y = (24.dp)) // Distribute space evenly for Wallet and User
                         )
                     }
                 }
             }
 
-            // Central "Add" button - overlaid on top
+            // Central "Add" button - overlaid
             Surface(
+                shape = CircleShape,
+                color = Orange, // FAB color
+                shadowElevation = 6.dp,
                 modifier = Modifier
-                    .align(Alignment.TopCenter) // Align to the top center of the 80.dp Box
-                    .size(70.dp) // Increased size for easier tapping and visual prominence
-                    .clip(CircleShape) // Make it circular
+                    .size(70.dp)
+                    .align(Alignment.TopCenter) // Aligns to the TopCenter of the 80.dp Box
+                    .offset(y = (-10).dp) // Pulls the FAB up slightly by half its protrusion
                     .clickable {
-                        // selectedItemIndex = Screen.Add.index // Optionally select "Add"
-                        navController.navigate(Screen.Add.route) {
-                            // Decide navigation behavior for "Add"
-                            // popUpTo(navController.graph.startDestinationId) { saveState = true } // If it's a main tab
-                            launchSingleTop = true
-                            restoreState = true // If state should be restored
+                        // selectedItemIndex = Screen.Add.index // Optionally update if Add has visual selection state
+                        if (currentRoute != Screen.Add.route) {
+                            navController.navigate(Screen.Add.route) {
+                                launchSingleTop = true
+                                // Decide if Add screen should be part of backstack history in bottom nav context
+                                // If it's a one-off action, it might not need complex popUpTo logic here
+                            }
                         }
-                    },
-                color = Orange, // Example: Use Orange for the FAB
-                shadowElevation = 6.dp // Add some shadow
+                    }
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.icon_plus),
-                    contentDescription = "Add",
-                    modifier = Modifier
-                        .size(38.dp), // Size of the icon itself
-                    // Consider tinting the icon if it's a vector and not the desired color
-                    // colorFilter = ColorFilter.tint(White)
-                )
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Image(
+                        painter = painterResource(id = R.drawable.icon_plus),
+                        contentDescription = "Tambah Transaksi",
+                        modifier = Modifier.size(70.dp) // Icon size within FAB
+                        // colorFilter = ColorFilter.tint(White) // If icon_plus is not white
+                    )
+                }
             }
         }
     }
 }
-
-
 // --- Placeholder Screens ---
 @Composable
 fun SimpleScreenContent(screenName: String) {
@@ -335,28 +295,6 @@ fun SimpleScreenContent(screenName: String) {
     ) {
         Text(text = screenName, style = MaterialTheme.typography.headlineMedium)
     }
-}
-
-@Composable
-fun WalletScreen() {
-    SimpleScreenContent("Wallet Screen")
-}
-
-@Composable
-fun ReportScreen() {
-    SimpleScreenContent("Report Screen")
-}
-
-
-
-@Composable
-fun TargetScreen() {
-    SimpleScreenContent("Target Screen")
-}
-
-@Composable
-fun UserScreen() {
-    SimpleScreenContent("User/Profile Screen")
 }
 
 

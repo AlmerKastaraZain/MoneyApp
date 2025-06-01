@@ -1,5 +1,6 @@
 package com.telkom.DanaApp.ui.theme
 
+import android.os.Parcelable
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -7,6 +8,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.telkom.DanaApp.R
+import kotlinx.android.parcel.Parcelize
+import java.security.Timestamp
 
 // Set of Material typography styles to start with
 val Typography = Typography(
@@ -36,7 +39,10 @@ val Typography = Typography(
 )
 
 
+@Parcelize
 data class TransactionData(
+    var documentId: String? = null,
+    val userId: String = "",
     val categoryName: String,
     @DrawableRes val categoryIconRes: Int,
     val amount: Int,
@@ -44,7 +50,7 @@ data class TransactionData(
     val time: String, // e.g., "10.30"
     val notes: String,
     val transactionType: String // "PENGELUARAN" or "PEMASUKAN"
-)
+) : Parcelable
 
 data class SpendingIcon(
     val name: String,

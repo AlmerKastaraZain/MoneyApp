@@ -205,6 +205,7 @@ fun AddBalance(
                                 is IncomeIcons -> categoryData.name to categoryData.iconResId
                                 else -> initialSpendingIcon.name to initialSpendingIcon.iconResId // Fallback
                             }
+                            currentTransactionType = type
                             currentCategoryName = name
                             currentCategoryIconRes = iconResId
                             isCategorySelectorVisible = false // Hide selector after selection
