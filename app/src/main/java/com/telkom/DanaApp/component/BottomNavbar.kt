@@ -73,6 +73,7 @@ import com.telkom.DanaApp.view.UserScreen
 import com.telkom.DanaApp.view.WalletScreen
 import com.telkom.DanaApp.view.WalletScreenStateful
 import com.telkom.DanaApp.viewmodel.WalletViewModel
+import androidx.lifecycle.compose.currentStateAsState
 
 // In MainScreen.kt (com.telkom.DanaApp.component)
 
@@ -108,7 +109,8 @@ private object NoRippleTheme : RippleTheme {
 
 @Composable
 fun MainScreen(
-    onGoToAddBalance: () -> Unit
+    onGoToAddBalance: () -> Unit,
+    onGoToLogin: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -131,7 +133,7 @@ fun MainScreen(
                 val walletUiState = walletViewModel.uiState
                 val lifecycleOwner = LocalLifecycleOwner.current
                 // Re-fetch transactions when the screen becomes RESUMED
-                LaunchedEffect(lifecycleOwner.lifecycle.currentState) {
+                LaunchedEffect(lifecycleOwner.lifecycle.currentStateAsState().value) {
                     if (lifecycleOwner.lifecycle.currentState == androidx.lifecycle.Lifecycle.State.RESUMED) {
                         Log.d("WalletScreen", "Screen Resumed, fetching transactions.")
                         walletViewModel.fetchUserTransactions()
@@ -160,7 +162,12 @@ fun MainScreen(
                     }
                 }
             }
-            composable(Screen.User.route) { UserScreen() }
+            composable(Screen.User.route) { UserScreen(
+                onNavigateToLogin = {
+                    onGoToLogin()
+                }
+            )
+            }
         }
     }
 }

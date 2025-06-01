@@ -13,7 +13,6 @@ import androidx.compose.ui.res.colorResource
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.telkom.DanaApp.component.MainScreen
-import com.telkom.DanaApp.component.WalletScreen
 import com.telkom.DanaApp.ui.theme.MoneyAppTheme
 import com.telkom.DanaApp.ui.theme.White
 
@@ -41,6 +40,11 @@ class MainActivity : AppCompatActivity() {
                         onGoToAddBalance = {
                             val intent = Intent(this, AddBalance::class.java)
                             startActivity(intent)
+                        },
+                                onGoToLogin = {
+                            val intent = Intent(this, LoginActivity::class.java)
+                            startActivity(intent)
+                            finish()
                         }
                     )
                 }
