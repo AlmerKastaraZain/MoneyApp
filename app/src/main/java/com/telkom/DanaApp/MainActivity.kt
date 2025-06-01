@@ -2,6 +2,7 @@ package com.telkom.DanaApp
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.telkom.DanaApp.component.MainScreen
+import com.telkom.DanaApp.component.WalletScreen
 import com.telkom.DanaApp.ui.theme.MoneyAppTheme
 import com.telkom.DanaApp.ui.theme.White
 
@@ -25,6 +27,8 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
+
 
         findViewById<ComposeView>(R.id.composeableHome).setContent {
             MoneyAppTheme {
